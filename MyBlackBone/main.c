@@ -4,9 +4,9 @@
 
 
 NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING RegistryPath);
-
 NTSTATUS DispatchIO(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp);
 void  DriverUnload(PDRIVER_OBJECT pDriverObject);
+VOID CreateProcessNotify(IN HANDLE ParentId, IN HANDLE ProcessId, IN BOOLEAN Create);
 #pragma alloc_text(INIT, DriverEntry)
 
 NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING RegistryPath)
@@ -39,8 +39,7 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING Registry
 		IoDeleteDevice(deviceObject);
 		return status;
 	}
-	KdPrint(("kd....\n"));
-	KdPrint(("create device success"));
+	KdPrint(("Driver Entry Exit\n"));
 	return status;
 
 
@@ -50,10 +49,43 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING Registry
 NTSTATUS DispatchIO(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 {
 	UNREFERENCED_PARAMETER(DeviceObject);
-	UNREFERENCED_PARAMETER(Irp);
 	NTSTATUS status = STATUS_SUCCESS;
-	Irp->IoStatus.Status = status;
+	PIO_STACK_LOCATION  pIrpStack;
+	pIrpStack = IoGetCurrentIrpStackLocation(Irp);
+	PVOID ioBuffer = NULL;
+	ioBuffer = Irp->AssociatedIrp.SystemBuffer;
 	Irp->IoStatus.Information = 0;
+	switch (pIrpStack->MajorFunction)
+	{
+	case IRP_MJ_DEVICE_CONTROL:  
+	{
+		ULONG ioControlCode;
+		ioControlCode = pIrpStack->Parameters.DeviceIoControl.IoControlCode;
+		switch (ioControlCode)
+		{
+		case IOCTL_PROC_CREATE_CALLBACK:
+			status = PsSetCreateProcessNotifyRoutine(CreateProcessNotify, FALSE);
+			if (!NT_SUCCESS(status))
+				KdPrint(("reg CreateProcess Callback failed err:%x\n", status));
+
+		}
+		
+
+
+
+
+	}
+
+
+
+	}
+
+
+
+
+
+
+	Irp->IoStatus.Status = status;
 	IoCompleteRequest(Irp, IO_NO_INCREMENT);
 	return status;
 }
@@ -66,4 +98,21 @@ void  DriverUnload(PDRIVER_OBJECT pDriverObject)
 	return;
 
 }
+VOID CreateProcessNotify(IN HANDLE ParentId, IN HANDLE ProcessId, IN BOOLEAN Create)
+{
+	UNREFERENCED_PARAMETER(ParentId);
+	if (Create)
+		KdPrint((" PID: %x Create\n", ProcessId));
+	else
+		KdPrint((" PID: %x Terminate\n", ProcessId));
+
+
+}
+
+
+
+
+
+
+
 
