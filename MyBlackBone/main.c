@@ -98,7 +98,8 @@ void  DriverUnload(PDRIVER_OBJECT pDriverObject)
 	return;
 
 }
-VOID CreateProcessNotify(IN HANDLE ParentId, IN HANDLE ProcessId, IN BOOLEAN Create)
+//进程创建或删除回调函数
+VOID CreateProcessNotify(IN HANDLE ParentId, IN HANDLE ProcessId, IN BOOLEAN Create) 
 {
 	UNREFERENCED_PARAMETER(ParentId);
 	if (Create)
@@ -108,6 +109,19 @@ VOID CreateProcessNotify(IN HANDLE ParentId, IN HANDLE ProcessId, IN BOOLEAN Cre
 
 
 }
+//遍历VAD
+NTSTATUS TraverseVAD(PEPROCESS pEProcess)
+{
+	PMM_AVL_TABLE pAVLTable = (PCHAR)pEProcess + VAD_OFFSET;
+	PMMVAD pVADRoot = pAVLTable->BalancedRoot->RightChild;
+
+	
+
+
+
+
+}
+
 
 
 
