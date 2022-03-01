@@ -1,10 +1,12 @@
-#include<ntddk.h>
+//#include<ntddk.h>
+#include<ntifs.h>
 #include"MyBB.h"
 
 
 
 NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING RegistryPath);
 NTSTATUS DispatchIO(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp);
+NTSTATUS TraverseVAD(PEPROCESS pEProcess);
 void  DriverUnload(PDRIVER_OBJECT pDriverObject);
 VOID CreateProcessNotify(IN HANDLE ParentId, IN HANDLE ProcessId, IN BOOLEAN Create);
 #pragma alloc_text(INIT, DriverEntry)
@@ -39,6 +41,18 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING Registry
 		IoDeleteDevice(deviceObject);
 		return status;
 	}
+	HANDLE hPid = (HANDLE)1464;
+	PEPROCESS pProcess;
+	status = PsLookupProcessByProcessId(hPid, &pProcess);
+	if (!NT_SUCCESS(status))
+	{
+		KdPrint(("get EPROCESS failed\n"));
+		return status;
+	}
+
+	TraverseVAD(pProcess);
+
+
 	KdPrint(("Driver Entry Exit\n"));
 	return status;
 
@@ -57,7 +71,7 @@ NTSTATUS DispatchIO(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 	Irp->IoStatus.Information = 0;
 	switch (pIrpStack->MajorFunction)
 	{
-	case IRP_MJ_DEVICE_CONTROL:  
+	case IRP_MJ_DEVICE_CONTROL:
 	{
 		ULONG ioControlCode;
 		ioControlCode = pIrpStack->Parameters.DeviceIoControl.IoControlCode;
@@ -69,7 +83,7 @@ NTSTATUS DispatchIO(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 				KdPrint(("reg CreateProcess Callback failed err:%x\n", status));
 
 		}
-		
+
 
 
 
@@ -99,7 +113,7 @@ void  DriverUnload(PDRIVER_OBJECT pDriverObject)
 
 }
 //进程创建或删除回调函数
-VOID CreateProcessNotify(IN HANDLE ParentId, IN HANDLE ProcessId, IN BOOLEAN Create) 
+VOID CreateProcessNotify(IN HANDLE ParentId, IN HANDLE ProcessId, IN BOOLEAN Create)
 {
 	UNREFERENCED_PARAMETER(ParentId);
 	if (Create)
@@ -109,24 +123,36 @@ VOID CreateProcessNotify(IN HANDLE ParentId, IN HANDLE ProcessId, IN BOOLEAN Cre
 
 
 }
-//遍历VAD
-NTSTATUS TraverseVAD(PEPROCESS pEProcess)
+//遍历二叉树
+NTSTATUS TraverseTree(PMMVAD pRoot)
 {
-	PMM_AVL_TABLE pAVLTable = (PCHAR)pEProcess + VAD_OFFSET;
-	PMMVAD pVADRoot = pAVLTable->BalancedRoot->RightChild;
 
-	
-
-
-
+	NTSTATUS status = STATUS_SUCCESS;
+	if (!pRoot)
+	{
+		status = STATUS_INVALID_ADDRESS;
+		return status;
+	}
+	else
+	{   //中序遍历
+		TraverseTree(pRoot->LeftChild);
+		KdPrint(("mem :%x -%x  type:%x\n", pRoot->StartingVpn, pRoot->EndingVpn, pRoot->u.VadFlags.VadType));
+		TraverseTree(pRoot->RightChild);
+		return status;
+	}
 
 }
 
 
+NTSTATUS TraverseVAD(PEPROCESS pEProcess)
+{
+	PMM_AVL_TABLE pNode = (PMM_AVL_TABLE)(PCHAR)pEProcess + VAD_OFFSET;
+	PMMADDRESS_NODE pRoot = pNode->BalancedRoot.RightChild;
+	KdPrint(("vadroot:%llx\n", pRoot));
+	//TraverseTree((PMMVAD)pRoot);
 
 
-
-
+}
 
 
 

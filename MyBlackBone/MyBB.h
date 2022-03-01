@@ -26,15 +26,18 @@ typedef struct _MMADDRESS_NODE          // 5 elements, 0x28 bytes (sizeof)
 	/*0x020*/     UINT64       EndingVpn;
 }MMADDRESS_NODE, *PMMADDRESS_NODE;
 
-typedef struct  _MM_AVL_TABLE
+typedef struct _MM_AVL_TABLE                          // 6 elements, 0x40 bytes (sizeof) 
 {
-	PMMADDRESS_NODE BalancedRoot;
-	void * NodeHint;
-	unsigned __int64 NumberGenericTableElements;
-
-
-
-} MM_AVL_TABLE, *PMM_AVL_TABLE;
+	/*0x000*/     struct _MMADDRESS_NODE BalancedRoot;              // 5 elements, 0x28 bytes (sizeof) 
+	struct                                            // 3 elements, 0x8 bytes (sizeof)  
+	{
+		/*0x028*/         UINT64       DepthOfTree : 5;                 // 0 BitPosition                   
+		/*0x028*/         UINT64       Unused : 3;                      // 5 BitPosition                   
+		/*0x028*/         UINT64       NumberGenericTableElements : 56; // 8 BitPosition                   
+	};
+	/*0x030*/     VOID*        NodeHint;
+	/*0x038*/     VOID*        NodeFreeHint;
+}MM_AVL_TABLE, *PMM_AVL_TABLE;
 
 
 union _EX_PUSH_LOCK // Size=8
