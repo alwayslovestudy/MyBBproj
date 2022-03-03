@@ -41,7 +41,7 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING Registry
 		IoDeleteDevice(deviceObject);
 		return status;
 	}
-	HANDLE hPid = (HANDLE)1464;
+	HANDLE hPid = (HANDLE)1012;
 	PEPROCESS pProcess;
 	status = PsLookupProcessByProcessId(hPid, &pProcess);
 	if (!NT_SUCCESS(status))
@@ -54,6 +54,8 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING Registry
 
 
 	KdPrint(("Driver Entry Exit\n"));
+	if (pProcess)
+		ObDereferenceObject(pProcess);
 	return status;
 
 
@@ -136,23 +138,28 @@ NTSTATUS TraverseTree(PMMVAD pRoot)
 	else
 	{   //ÖÐÐò±éÀú
 		TraverseTree(pRoot->LeftChild);
-		KdPrint(("mem :%x -%x  type:%x\n", pRoot->StartingVpn, pRoot->EndingVpn, pRoot->u.VadFlags.VadType));
+		KdPrint(("mem :%llx - %llx type:%x\n", pRoot->StartingVpn, pRoot->EndingVpn, pRoot->u.VadFlags.VadType));
 		TraverseTree(pRoot->RightChild);
 		return status;
 	}
-
 }
-
 
 NTSTATUS TraverseVAD(PEPROCESS pEProcess)
 {
-	PMM_AVL_TABLE pNode = (PMM_AVL_TABLE)(PCHAR)pEProcess + VAD_OFFSET;
-	PMMADDRESS_NODE pRoot = pNode->BalancedRoot.RightChild;
+	PMM_AVL_TABLE pNode = (PMM_AVL_TABLE)((((INT64)pEProcess)) + VAD_OFFSET);
+
+	PMMADDRESS_NODE pRoot = pNode->BalancedRoot.LeftChild;
 	KdPrint(("vadroot:%llx\n", pRoot));
-	//TraverseTree((PMMVAD)pRoot);
+	TraverseTree((PMMVAD)pRoot);
 
-
+	
 }
+
+
+
+
+
+
 
 
 
